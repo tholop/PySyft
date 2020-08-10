@@ -169,6 +169,8 @@ class PrimitiveStorage:
             worker_message = self._owner.create_worker_command_message(
                 "feed_crypto_primitive_store", None, worker_types_primitives[worker]
             )
+            print(f"Worker message ready: {worker_message}")
+            print(f"Send primitive {worker_types_primitives[worker]} to {worker}")
             self._owner.send_msg(worker_message, worker)
 
     def add_primitives(self, types_primitives: dict):
@@ -195,23 +197,31 @@ class PrimitiveStorage:
                 if len(current_primitives) == 0:
                     setattr(self, op, list(primitives))
                 else:
-                    for i, primitive in enumerate(primitives):
-                        if len(current_primitives[i]) == 0:
-                            current_primitives[i] = primitive
-                        else:
-                            if isinstance(current_primitives[i], tuple):
-                                new_prims = []
-                                for cur_prim, prim in zip(current_primitives[i], primitive):
-                                    new_prims.append(
-                                        np.concatenate((cur_prim, prim), axis=len(prim.shape) - 1)
-                                    )
-                                current_primitives[i] = tuple(new_prims)
-                            else:
-                                current_primitives[i] = np.concatenate(
-                                    (current_primitives[i], primitive),
-                                    axis=len(primitive.shape) - 1,
-                                )
-            else:
+                    # TODO: array friendly. Why are we merging primitives?
+                    print(f"Current primitives: {current_primitives}")
+                    print(f"New prims: {primitives}")
+
+                    current_primitives = np.concatenate(current_primitives, primitives)
+                    print(f"After adding to store: {current_primitives}")
+
+                #         for i, primitive in enumerate(primitives):
+                #             if len(current_primitives[i]) == 0:
+                #                 current_primitives[i] = primitive
+
+                #             else:
+                #                 if isinstance(current_primitives[i], tuple):
+                #                     new_prims = []
+                #                     for cur_prim, prim in zip(current_primitives[i], primitive):
+                #                         new_prims.append(
+                #                             np.concatenate((cur_prim, prim), axis=len(prim.shape) - 1)
+                #                         )
+                #                     current_primitives[i] = tuple(new_prims)
+                #                 else:
+                #                     current_primitives[i] = np.concatenate(
+                #                         (current_primitives[i], primitive),
+                #                         axis=len(primitive.shape) - 1,
+                #                     )
+                # else:
                 raise TypeError(f"Can't resolve primitive {op} to a framework")
 
     def build_fss_keys(self, op: str):
@@ -231,10 +241,8 @@ class PrimitiveStorage:
             assert (
                 n_party == 2
             ), f"The FSS protocol only works for 2 workers, {n_party} were provided."
-            alpha, s_00, s_01, *CW = fss_class.keygen(n_values=n_instances)
-            # simulate sharing TODO clean this
-            mask = np.random.randint(0, 2 ** n, alpha.shape, dtype=alpha.dtype)
-            return [((alpha - mask) % 2 ** n, s_00, *CW), (mask, s_01, *CW)]
+            keys_a, keys_b = fss_class.keygen(n_values=n_instances)
+            return [keys_a, keys_b]
 
         return build_separate_fss_keys
 

@@ -9,11 +9,15 @@ Useful papers are:
 
 Note that the protocols are quite different in aspect from those papers
 """
+
+import rustfss
+
 import math
 import numpy as np
-import shaloop
-import multiprocessing
-import asyncio
+
+# import shaloop
+# import multiprocessing
+# import asyncio
 
 import torch as th
 import syft as sy
@@ -227,6 +231,14 @@ class DPF:
 
     @staticmethod
     def keygen(n_values=1):
+        return rustfss.eq.keygen(n_values=n_values)
+
+    @staticmethod
+    def eval(b, x, k_b):
+        return rustfss.eq.keygen(b, x, k_b)
+
+    @staticmethod
+    def py_keygen(n_values=1):
         alpha = np.random.randint(0, 2 ** n, size=(n_values,), dtype=np.uint64)
         beta = np.array([1])
         α = bit_decomposition(alpha)
@@ -261,7 +273,7 @@ class DPF:
         return (alpha, s[0][0], s[0][1], *_CW, CW_n)
 
     @staticmethod
-    def eval(b, x, *k_b):
+    def py_eval(b, x, *k_b):
         x = x.astype(np.uint64)
         original_shape = x.shape
         x = x.reshape(-1)
