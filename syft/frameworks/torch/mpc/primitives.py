@@ -56,6 +56,7 @@ class PrimitiveStorage:
             kwargs (dict): further arguments to be used depending of the primitive
         """
         primitive_stack = getattr(self, op)
+        print("Gimme some good primitives.")
 
         if op in {"mul", "matmul"}:
             shapes = kwargs.get("shapes")
@@ -85,51 +86,65 @@ class PrimitiveStorage:
                         f"[({str(tuple(shapes[0]))}, {str(tuple(shapes[1]))})], "
                         f"n_instances={n_instances}"
                     )
+                # print("get keys beaver failure")
+                # raise Exception("Une exception de gitan beaver.")
+
                 raise EmptyCryptoPrimitiveStoreError(
                     self, available_instances, n_instances=n_instances, op=op, **kwargs
                 )
         elif op in {"fss_eq", "fss_comp"}:
+            # print(f"Primitive stack: {primitive_stack}")
+            # Primitive stack is a list of keys arrays (2d numpy u8 arrays).
+            # TODO: should we get the most relevant stack? Generation/consumption algo.
             available_instances = len(primitive_stack[0]) if len(primitive_stack) > 0 else -1
+
+            print(f"Getting keys for {op}. Avail: {available_instances}. Ask for: {n_instances}")
             if available_instances >= n_instances:
-                keys = []
-                # We iterate on the different elements that constitute a given primitive, for
-                # example of the beaver triples, you would have 3 elements.
-                for i, prim in enumerate(primitive_stack):
-                    # We're selecting on the last dimension of the tensor because it's simpler for
-                    # generating those primitives in crypto protocols
-                    # [:] ~ [slice(None)]
-                    # [:1] ~ [slice(1)]
-                    # [1:] ~ [slice(1, None)]
-                    # [:, :, :1] ~ [slice(None)] * 2 + [slice(1)]
-                    if isinstance(prim, tuple):
-
-                        ps = []
-                        left_ps = []
-                        for p in prim:
-                            n_dim = len(p.shape)
-                            get_slice = tuple([slice(None)] * (n_dim - 1) + [slice(n_instances)])
-                            remaining_slice = tuple(
-                                [slice(None)] * (n_dim - 1) + [slice(n_instances, None)]
-                            )
-                            ps.append(p[get_slice])
-                            if remove:
-                                left_ps.append(p[remaining_slice])
-
-                        keys.append(tuple(ps))
-                        if remove:
-                            primitive_stack[i] = tuple(left_ps)
-                    else:
-                        n_dim = len(prim.shape)
-                        get_slice = tuple([slice(None)] * (n_dim - 1) + [slice(n_instances)])
-                        remaining_slice = tuple(
-                            [slice(None)] * (n_dim - 1) + [slice(n_instances, None)]
-                        )
-
-                        keys.append(prim[get_slice])
-                        if remove:
-                            primitive_stack[i] = prim[remaining_slice]
-
+                print(f"Original stack: {primitive_stack[0].shape}")
+                keys = primitive_stack[0][0:n_instances]
+                if remove:
+                    primitive_stack[0] = primitive_stack[0][n_instances:]
+                print(f"New stack: {primitive_stack[0].shape}, keys {keys.shape}")
                 return keys
+                # keys = []
+                # # We iterate on the different elements that constitute a given primitive, for
+                # # example of the beaver triples, you would have 3 elements.
+                # for i, prim in enumerate(primitive_stack):
+                #     # We're selecting on the last dimension of the tensor because it's simpler for
+                #     # generating those primitives in crypto protocols
+                #     # [:] ~ [slice(None)]
+                #     # [:1] ~ [slice(1)]
+                #     # [1:] ~ [slice(1, None)]
+                #     # [:, :, :1] ~ [slice(None)] * 2 + [slice(1)]
+                #     if isinstance(prim, tuple):
+
+                #         ps = []
+                #         left_ps = []
+                #         for p in prim:
+                #             n_dim = len(p.shape)
+                #             get_slice = tuple([slice(None)] * (n_dim - 1) + [slice(n_instances)])
+                #             remaining_slice = tuple(
+                #                 [slice(None)] * (n_dim - 1) + [slice(n_instances, None)]
+                #             )
+                #             ps.append(p[get_slice])
+                #             if remove:
+                #                 left_ps.append(p[remaining_slice])
+
+                #         keys.append(tuple(ps))
+                #         if remove:
+                #             primitive_stack[i] = tuple(left_ps)
+                #     else:
+                #         n_dim = len(prim.shape)
+                #         get_slice = tuple([slice(None)] * (n_dim - 1) + [slice(n_instances)])
+                #         remaining_slice = tuple(
+                #             [slice(None)] * (n_dim - 1) + [slice(n_instances, None)]
+                #         )
+
+                #         keys.append(prim[get_slice])
+                #         if remove:
+                #             primitive_stack[i] = prim[remaining_slice]
+
+                # return keys
             else:
                 if self._owner.verbose:
                     print(
@@ -138,6 +153,8 @@ class PrimitiveStorage:
                         f"[{', '.join(c.id for c in sy.local_worker.clients)}], "
                         f"n_instances={n_instances}"
                     )
+                # print("get keys fss failure")
+                # raise Exception("Une exception de gitan.")
                 raise EmptyCryptoPrimitiveStoreError(
                     self, available_instances, n_instances=n_instances, op=op, **kwargs
                 )
@@ -170,7 +187,9 @@ class PrimitiveStorage:
                 "feed_crypto_primitive_store", None, worker_types_primitives[worker]
             )
             print(f"Worker message ready: {worker_message}")
-            print(f"Send primitive {worker_types_primitives[worker]} to {worker}")
+            print(
+                f"Send primitive {worker_types_primitives[worker]} of shape {worker_types_primitives[worker][op].shape} to {worker}"
+            )
             self._owner.send_msg(worker_message, worker)
 
     def add_primitives(self, types_primitives: dict):
@@ -195,13 +214,16 @@ class PrimitiveStorage:
                             )
             elif op in {"fss_eq", "fss_comp"}:
                 if len(current_primitives) == 0:
-                    setattr(self, op, list(primitives))
+                    setattr(self, op, [primitives])
+                    print("Len 0")
                 else:
                     # TODO: array friendly. Why are we merging primitives?
                     print(f"Current primitives: {current_primitives}")
                     print(f"New prims: {primitives}")
 
-                    current_primitives = np.concatenate(current_primitives, primitives)
+                    # current_primitives = np.concatenate(current_primitives, primitives)
+                    current_primitives.append(primitives)
+
                     print(f"After adding to store: {current_primitives}")
 
                 #         for i, primitive in enumerate(primitives):
@@ -221,7 +243,7 @@ class PrimitiveStorage:
                 #                         (current_primitives[i], primitive),
                 #                         axis=len(primitive.shape) - 1,
                 #                     )
-                # else:
+            else:
                 raise TypeError(f"Can't resolve primitive {op} to a framework")
 
     def build_fss_keys(self, op: str):

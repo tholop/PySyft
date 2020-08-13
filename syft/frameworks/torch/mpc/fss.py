@@ -235,7 +235,7 @@ class DPF:
 
     @staticmethod
     def eval(b, x, k_b):
-        return rustfss.eq.keygen(b, x, k_b)
+        return rustfss.eq.eval(b, x, k_b)
 
     @staticmethod
     def py_keygen(n_values=1):
