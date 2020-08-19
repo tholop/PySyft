@@ -1,6 +1,7 @@
 import pytest
 import torch as th
 import numpy as np
+import time
 
 from syft.frameworks.torch.mpc.fss import DPF, DIF, n
 
@@ -126,3 +127,24 @@ def test_using_crypto_store(workers, op):
     print(f"Should be {th_op(x, 0)}")
 
     assert (th_result == th_op(x, 0)).all()
+
+
+@pytest.mark.parametrize("op", ["eq"])
+def test_fat_keygen(workers, op):
+    n_instances = 500_000
+
+    alice, bob, me = workers["alice"], workers["bob"], workers["me"]
+    class_ = {"eq": DPF, "le": DIF}[op]
+    th_op = {"eq": th.eq, "le": th.le}[op]
+    gather_op = {"eq": "__add__", "le": "__add__"}[op]
+    primitive = {"eq": "fss_eq", "le": "fss_comp"}[op]
+
+    t = time.time()
+
+    me.crypto_store.provide_primitives(primitive, [alice, bob], n_instances=n_instances)
+    keys_a = alice.crypto_store.get_keys(primitive, n_instances, remove=True)
+    keys_b = bob.crypto_store.get_keys(primitive, n_instances, remove=True)
+
+    print(f"Generated and got {n_instances} primitives in {time.time() - t}.")
+
+    assert False

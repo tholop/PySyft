@@ -67,9 +67,6 @@ def proto_type_info(cls):
     Throws an exception when such class does not exists in the `proto.json`.
     """
     type_name = fullname(cls)
-
-    print(f"typename {type_name}")
-
     if type_name in proto_info["TYPES"]:
         return TypeInfo(name=type_name, obj=proto_info["TYPES"][type_name])
     elif cls.get_msgpack_code.__qualname__.startswith(cls.__name__):
