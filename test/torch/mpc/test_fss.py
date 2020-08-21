@@ -131,7 +131,7 @@ def test_using_crypto_store(workers, op):
 
 @pytest.mark.parametrize("op", ["eq"])
 def test_fat_keygen(workers, op):
-    n_instances = 500_000
+    n_instances = 1_000_000
 
     alice, bob, me = workers["alice"], workers["bob"], workers["me"]
     class_ = {"eq": DPF, "le": DIF}[op]
@@ -146,5 +146,14 @@ def test_fat_keygen(workers, op):
     keys_b = bob.crypto_store.get_keys(primitive, n_instances, remove=True)
 
     print(f"Generated and got {n_instances} primitives in {time.time() - t}.")
+
+    x = th.rand(size=(n_instances,)).numpy().astype(np.uint64)
+
+    t = time.time()
+    y0 = class_.eval(0, x, keys_a)
+    y1 = class_.eval(1, x, keys_b)
+    print(
+        f"Evaluated both parties on a dummy tensor for {n_instances} primitives in {time.time() - t}."
+    )
 
     assert False

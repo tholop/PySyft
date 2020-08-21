@@ -56,8 +56,6 @@ class PrimitiveStorage:
             kwargs (dict): further arguments to be used depending of the primitive
         """
         primitive_stack = getattr(self, op)
-        print("Gimme some good primitives.")
-
         if op in {"mul", "matmul"}:
             shapes = kwargs.get("shapes")
             dtype = kwargs.get("dtype")
@@ -98,13 +96,10 @@ class PrimitiveStorage:
             # TODO: should we get the most relevant stack? Generation/consumption algo.
             available_instances = len(primitive_stack[0]) if len(primitive_stack) > 0 else -1
 
-            print(f"Getting keys for {op}. Avail: {available_instances}. Ask for: {n_instances}")
             if available_instances >= n_instances:
-                print(f"Original stack: {primitive_stack[0].shape}")
                 keys = primitive_stack[0][0:n_instances]
                 if remove:
                     primitive_stack[0] = primitive_stack[0][n_instances:]
-                print(f"New stack: {primitive_stack[0].shape}, keys {keys.shape}")
                 return keys
                 # keys = []
                 # # We iterate on the different elements that constitute a given primitive, for
@@ -185,10 +180,6 @@ class PrimitiveStorage:
         for i, worker in enumerate(workers):
             worker_message = self._owner.create_worker_command_message(
                 "feed_crypto_primitive_store", None, worker_types_primitives[worker]
-            )
-            print(f"Worker message ready: {worker_message}")
-            print(
-                f"Send primitive {worker_types_primitives[worker]} of shape {worker_types_primitives[worker][op].shape} to {worker}"
             )
             self._owner.send_msg(worker_message, worker)
 
