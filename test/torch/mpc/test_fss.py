@@ -142,10 +142,14 @@ def test_fat_keygen(workers, op):
     t = time.time()
 
     me.crypto_store.provide_primitives(primitive, [alice, bob], n_instances=n_instances)
+    print(f"Generated {n_instances} primitives in {time.time() - t}.")
+
+    t = time.time()
+
     keys_a = alice.crypto_store.get_keys(primitive, n_instances, remove=True)
     keys_b = bob.crypto_store.get_keys(primitive, n_instances, remove=True)
 
-    print(f"Generated and got {n_instances} primitives in {time.time() - t}.")
+    print(f"Got {n_instances} primitives in {time.time() - t}.")
 
     x = th.rand(size=(n_instances,)).numpy().astype(np.uint64)
 

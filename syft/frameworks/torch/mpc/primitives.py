@@ -8,6 +8,8 @@ from syft.exceptions import EmptyCryptoPrimitiveStoreError
 from syft.frameworks.torch.mpc.beaver import build_triple
 from syft.workers.abstract import AbstractWorker
 
+import time
+
 
 class PrimitiveStorage:
     """
@@ -172,16 +174,20 @@ class PrimitiveStorage:
 
         builder = self._builders[op]
 
+        t = time.time()
         primitives = builder(n_party=len(workers), n_instances=n_instances, **kwargs)
+        print(f"Builder returned {n_instances} primitives in {time.time() - t}.")
 
         for worker_primitives, worker in zip(primitives, workers):
             worker_types_primitives[worker][op] = worker_primitives
 
         for i, worker in enumerate(workers):
+            t = time.time()
             worker_message = self._owner.create_worker_command_message(
                 "feed_crypto_primitive_store", None, worker_types_primitives[worker]
             )
             self._owner.send_msg(worker_message, worker)
+            print(f"Message sent {n_instances} primitives to {worker} in {time.time() - t}.")
 
     def add_primitives(self, types_primitives: dict):
         """
