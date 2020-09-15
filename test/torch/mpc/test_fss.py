@@ -89,10 +89,8 @@ def torch_to_numpy(op):
     assert (th_result == th_op(x, 0)).all()
 
 
-@pytest.mark.parametrize("op", ["eq"])
-# @pytest.mark.parametrize("op", ["eq", "le"])
-
-
+# @pytest.mark.parametrize("op", ["eq"])
+@pytest.mark.parametrize("op", ["eq", "le"])
 def test_using_crypto_store(workers, op):
     alice, bob, me = workers["alice"], workers["bob"], workers["me"]
     class_ = {"eq": DPF, "le": DIF}[op]
@@ -119,6 +117,7 @@ def test_using_crypto_store(workers, op):
     y0 = class_.eval(0, x_masked, keys_a)
     print(f"Evaluating the rest")
     y1 = class_.eval(1, x_masked, keys_b)
+    print(f"Orig result: {y0} {y1}, type {type(y0)}")
 
     np_result = getattr(y0, gather_op)(y1)
     print(f"np result {np_result}")
@@ -126,38 +125,5 @@ def test_using_crypto_store(workers, op):
     print(f"th result {th_result}")
     print(f"Should be {th_op(x, 0)}")
 
+    # assert False
     assert (th_result == th_op(x, 0)).all()
-
-
-@pytest.mark.parametrize("op", ["eq"])
-def test_fat_keygen(workers, op):
-    n_instances = 1_000_000
-
-    alice, bob, me = workers["alice"], workers["bob"], workers["me"]
-    class_ = {"eq": DPF, "le": DIF}[op]
-    th_op = {"eq": th.eq, "le": th.le}[op]
-    gather_op = {"eq": "__add__", "le": "__add__"}[op]
-    primitive = {"eq": "fss_eq", "le": "fss_comp"}[op]
-
-    t = time.time()
-
-    me.crypto_store.provide_primitives(primitive, [alice, bob], n_instances=n_instances)
-    print(f"Generated {n_instances} primitives in {time.time() - t}.")
-
-    t = time.time()
-
-    keys_a = alice.crypto_store.get_keys(primitive, n_instances, remove=True)
-    keys_b = bob.crypto_store.get_keys(primitive, n_instances, remove=True)
-
-    print(f"Got {n_instances} primitives in {time.time() - t}.")
-
-    x = th.rand(size=(n_instances,)).numpy().astype(np.uint64)
-
-    t = time.time()
-    y0 = class_.eval(0, x, keys_a)
-    y1 = class_.eval(1, x, keys_b)
-    print(
-        f"Evaluated both parties on a dummy tensor for {n_instances} primitives in {time.time() - t}."
-    )
-
-    assert False
